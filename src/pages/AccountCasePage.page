@@ -66,7 +66,6 @@
         var distanceData = [];
         var accountsIdsJSON = '{!accountsIdsJSON}';
         var casesCheckbox = $('#showCases');
-        console.log(accountsIdsJSON);
 
         function initMap() {
             map = new google.maps.Map(document.getElementById('map'), {
@@ -192,7 +191,7 @@
         function renderCards() {
             var str = '<div id="cardsBody" style="height:700px; overflow:scroll; overflow-x:hidden;">';
             for (var i = 0; i < cardsData.length; i++) {
-                str += '<article class="slds-card" style="margin-right: 5px;" onclick="clickHandler(this);"><div class="slds-card__header slds-grid"><header class="slds-media slds-has-flexi-truncate"><div class="slds-media__body slds-truncate"><b><i><h1><span>' + cardsData[i].acc.Id + '</span></h1></b></i></div></header></div><div class="slds-card__body" style="margin-left: 10%;"><b>City: </b>' + cardsData[i].acc.BillingCity + '<br><b>Address: </b>' + cardsData[i].acc.BillingStreet + '<br><b>Latitude : </b>' + cardsData[i].acc.BillingLatitude + '<br><b>Longitude: </b>' + cardsData[i].acc.BillingLongitude + '</div><br><input style="display: none;" type="text" id="lat" value="' + cardsData[i].acc.BillingLatitude + '"><input type="text" style="display: none;" id="lng" value="' + cardsData[i].acc.BillingLongitude + '"><input style="display: none;" type="text"  id="accId" value="' + cardsData[i].acc.Id + '"></article>';
+                str += '<article class="slds-card" style="margin-right: 5px; cursor: pointer" onclick="clickHandler(this);"><div class="slds-card__header slds-grid"><header class="slds-media slds-has-flexi-truncate"><div class="slds-media__body slds-truncate"><b><i><h1><span>' + cardsData[i].acc.Id + '</span></h1></b></i></div></header></div><div class="slds-card__body" style="margin-left: 10%;"><b>City: </b>' + cardsData[i].acc.BillingCity + '<br><b>Address: </b>' + cardsData[i].acc.BillingStreet + '<br><b>Latitude : </b>' + cardsData[i].acc.BillingLatitude + '<br><b>Longitude: </b>' + cardsData[i].acc.BillingLongitude + '</div><br><input style="display: none;" type="text" id="lat" value="' + cardsData[i].acc.BillingLatitude + '"><input type="text" style="display: none;" id="lng" value="' + cardsData[i].acc.BillingLongitude + '"><input style="display: none;" type="text"  id="accId" value="' + cardsData[i].acc.Id + '"></article>';
             }
             str += '</div>';
             $('#cardsHeader').after(str);
