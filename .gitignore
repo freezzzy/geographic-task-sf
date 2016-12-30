@@ -1,0 +1,6 @@
+.idea
+config
+*.sublime-project
+*.sublime-settings
+*.sublime-workspace
+src/staticresources

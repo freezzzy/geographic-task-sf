@@ -1,0 +1,206 @@
+<apex:page controller="AccountCasePageController" showHeader="true" standardStylesheets="true" sidebar="false" applyHtmlTag="true" applyBodyTag="false" docType="html-5.0">
+<html xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="x-ua-compatible" content="ie=edge" />
+  <title>geographic-task</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <apex:stylesheet value="{!URLFOR($Resource.SLDS, 'assets/styles/salesforce-lightning-design-system-vf.min.css')}" />
+  <style type="text/css">
+      #map {
+        height: 800px;
+      }
+    </style>
+</head>
+<body>
+    <apex:form >
+        <div class="geographic-task">
+            <div class="slds-grid">
+                <div class="slds-size--1-of-8">
+                    <div id="cardsHeader" class="slds-page-header" role="banner" style="margin-bottom: 5px;">
+                      <div class="slds-media slds-media--center">
+                        <div class="slds-media__figure">
+                          <svg aria-hidden="true" class="slds-icon slds-icon-standard-opportunity">
+                            <use xlink:href="{!URLFOR($Resource.SLDS, '/assets/icons/standard-sprite/svg/symbols.svg#account')}"></use>
+                          </svg>
+                        </div>
+                        <div class="slds-media__body">
+                          <p class="slds-page-header__title slds-truncate">Accounts</p>
+                        </div>
+                      </div>
+                      <div style="margin-top: 10px;">
+                          <div class="slds-form-element">
+                          <div class="slds-form-element__control">
+                            <span class="slds-checkbox">
+                              <input type="checkbox" id="showCases" checked="" onclick="event.stopPropagation(); drawMarkers();" />
+                              <label class="slds-checkbox__label" for="showCases">
+                                <span class="slds-checkbox--faux"></span>
+                                <span class="slds-form-element__label">Show Cases</span>
+                              </label>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                </div>
+                <div class="slds-size--4-of-8" style="margin-left: 5px;">
+                    <div id="map"></div>
+                </div>
+                <div id="distances" class="slds-size--3-of-8" style="margin-left: 10px;">
+                </div>
+            </div>
+        </div>
+    </apex:form>
+
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBiQjbVABmnHpFMGuv7XJMDQY7Sxwfwrpg"></script>
+    <script>
+        var cardsData = [];
+        var markedList = [];
+        var markersList = [];
+        var map;
+        var accountIcon = 'http://maps.google.com/mapfiles/ms/micons/purple-dot.png';
+        // var caseIcon = 'http://icons.iconarchive.com/icons/icons-land/vista-map-markers/32/Map-Marker-Marker-Outside-Chartreuse-icon.png';
+        var markerColors = ['red', 'black', 'blue', 'green', 'grey', 'orange', 'purple', 'white', 'yellow'];
+        var selectedAccounts = [];
+        var distanceData = [];
+        var accountsIdsJSON = '{!accountsIdsJSON}';
+        var casesCheckbox = $('#showCases');
+        console.log(accountsIdsJSON);
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: {
+                    lat: 53.934428,
+                    lng: 27.562357
+                },
+                zoom: 12
+            });
+        }
+
+        function getAccountsAndCases() {
+            Visualforce.remoting.Manager.invokeAction(
+                '{!$RemoteAction.AccountCasePageController.getAccountsAndCases}',
+                accountsIdsJSON,
+                function(result, event) {
+                    cardsData = JSON.parse(result);
+                    renderCards();
+                }, {
+                    escape: false
+                }
+            );
+        }
+
+        function clickHandler(item) {
+            if (isMarkered(item)) {
+                markedList.remove(item);
+                item.style.border = ''
+            } else {
+                markedList.push(item);
+                item.style.border = '2px solid red';
+            }
+            drawMarkers();
+            findNearestCases();
+        }
+
+        function createMarker(lat, lng, iconFile) {
+            var point = new google.maps.LatLng(lat, lng);
+            var marker = new google.maps.Marker({
+                position: point
+            });
+            marker.setIcon(iconFile);
+            return marker;
+        }
+
+        function findCases(accountId) {
+            for (var i = 0; i < cardsData.length; i++) {
+                if (cardsData[i].acc.Id === accountId) {
+                    return cardsData[i].cases;
+                }
+            }
+        }
+
+        function findNearestCases() {
+            Visualforce.remoting.Manager.invokeAction(
+                '{!$RemoteAction.AccountCasePageController.getDistanses}',
+                JSON.stringify(selectedAccounts),
+                function(result, event) {
+                    distanceData = JSON.parse(result);
+                    renderTable();
+                }, {
+                    escape: false
+                }
+            );
+        }
+
+        function drawMarkers() {
+            setMapOnAll(null);
+            markersList = [];
+            selectedAccounts = [];
+            for (var i = 0; i < markedList.length; i++) {
+                var accId = markedList[i].querySelectorAll('#accId')[0].value;
+                selectedAccounts.push(accId);
+                if (casesCheckbox.is(':checked')) {
+                    var casesList = findCases(accId);
+                    for (var j = 0; j < casesList.length; j++) {
+                        if (casesList[j].Location__Latitude__s != '' && casesList[j].Location__Longitude__s != '') {
+                            var lat = casesList[j].Location__Latitude__s;
+                            var lng = casesList[j].Location__Longitude__s;
+                            var markerURL = 'https://raw.githubusercontent.com/Concept211/Google-Maps-Markers/master/images/marker_' + markerColors[selectedAccounts.length - 1] + selectedAccounts.length + '.png';
+                            var marker = createMarker(lat, lng, markerURL);
+                            markersList.push(marker);
+                        }
+                    }
+                }
+                var lat = markedList[i].querySelectorAll('#lat')[0].value;
+                var lng = markedList[i].querySelectorAll('#lng')[0].value;
+                var markerURL = 'https://raw.githubusercontent.com/Concept211/Google-Maps-Markers/master/images/marker_' + markerColors[selectedAccounts.length - 1] + 'A.png';
+                var marker = createMarker(lat, lng, markerURL);
+                markersList.push(marker);
+            }
+            setMapOnAll(map);
+        }
+
+        function isMarkered(item) {
+            return markedList.includes(item);
+        }
+
+        function setMapOnAll(map) {
+            for (var i = 0; i < markersList.length; i++) {
+                markersList[i].setMap(map);
+            }
+        }
+
+        function renderTable() {
+            str = '<table border="1"><tr><th>Account ID</th><th>Case Number</th><th>Drive Distance</th><th>SOQL Distance</th></tr>';
+            $('#distances').html();
+            for (var i = 0; i < distanceData.length; i++) {
+                for (var j = 0; j < 3; j++) {
+                    str += '<tr>';
+                    str += '<td>' + distanceData[i].accId + '</td>';
+                    str += '<td>' + distanceData[i].matrix[j].caseId + '</td>';
+                    str += '<td>' + Number(distanceData[i].matrix[j].distance).toFixed(3) + '</td>';
+                    str += '<td>' + Number(distanceData[i].soql[j].distance).toFixed(3) + '</td>';
+                    str += '</tr>'
+                }
+                str += '<tr><td colspan="4"><td></tr>';
+            }
+            str += '</table>';
+            $('#distances').html(str);
+        }
+
+        function renderCards() {
+            var str = '<div id="cardsBody" style="height:700px; overflow:scroll; overflow-x:hidden;">';
+            for (var i = 0; i < cardsData.length; i++) {
+                str += '<article class="slds-card" style="margin-right: 5px;" onclick="clickHandler(this);"><div class="slds-card__header slds-grid"><header class="slds-media slds-has-flexi-truncate"><div class="slds-media__body slds-truncate"><b><i><h1><span>' + cardsData[i].acc.Id + '</span></h1></b></i></div></header></div><div class="slds-card__body" style="margin-left: 10%;"><b>City: </b>' + cardsData[i].acc.BillingCity + '<br><b>Address: </b>' + cardsData[i].acc.BillingStreet + '<br><b>Latitude : </b>' + cardsData[i].acc.BillingLatitude + '<br><b>Longitude: </b>' + cardsData[i].acc.BillingLongitude + '</div><br><input style="display: none;" type="text" id="lat" value="' + cardsData[i].acc.BillingLatitude + '"><input type="text" style="display: none;" id="lng" value="' + cardsData[i].acc.BillingLongitude + '"><input style="display: none;" type="text"  id="accId" value="' + cardsData[i].acc.Id + '"></article>';
+            }
+            str += '</div>';
+            $('#cardsHeader').after(str);
+        }
+
+        initMap();
+        getAccountsAndCases();
+    </script>
+</body>
+</html>
+</apex:page>
